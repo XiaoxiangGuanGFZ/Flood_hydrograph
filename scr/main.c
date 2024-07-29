@@ -74,10 +74,11 @@ int main(int argc, char *argv[])
     double *data_G;  // gradient of discharge
     Gradient_discharge(data_Q, &data_G, dimLen);
     printf("-------------- discharge gradient compute: Done!\n");
-    double position_th = 90;
+    
+    // double position_th = 90;
     double G_percentile;
     // Gradient_percentile(data_G, position_th, &G_percentile, dimLen);
-    G_percentile = 0.5667546;
+    // G_percentile = 0.5667546;
     G_percentile = s_value;
     //           90%       92%       95%       97% 
     //     0.5667546 0.7167893 1.1169979 1.6636920 
@@ -101,11 +102,7 @@ int main(int argc, char *argv[])
     // {
     //     printf("%5.2f, %5.2f, %d\n", *(data_Q + i), *(data_G + i), *(flag_peak + i));
     // }
-
-    // for (size_t i = 0; i < n_peaks; i++)
-    // {
-    //     printf("%d,", *(index_peak + i));
-    // }
+    
     FILE *p_out;
     if ((p_out = fopen(output_file, "w")) == NULL)
     {
@@ -118,7 +115,7 @@ int main(int argc, char *argv[])
 
     printf("-------------- flood events extraction: ...\n");
     int id_start, id_end;
-    int time_lag_days = 7;
+    int time_lag_days = 3; // time lag between two peaks; 3 days for catchment with area less than 1000km2
     int event_id = 0;
     printf("%8s%9s%9s%8s\n", "Event_id", "id_start", "id_end", "Q_peak");
     for (size_t i = 0; i < n_peaks; i++)

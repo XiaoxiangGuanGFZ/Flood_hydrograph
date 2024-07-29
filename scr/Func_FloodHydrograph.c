@@ -126,9 +126,9 @@ void Flood_event_identify(
     {
         i -= 1;   // trace back, prior to the peak step
         if (*(flag_peak + i) == 1) {
-            // it is peak
+            // it is also peak
             if (abs(id_peak_tmp - i) >= time_lag_steps &&
-                peak_independent(data_Q, data_G, i, id_peak) == 1 )
+                peak_independent(data_Q, data_G, i, id_peak) == 1)
             {
                 /********
                  * it is an independent peak:
@@ -173,6 +173,7 @@ void Flood_event_identify(
             }
         }
     }
+
     if (*id_start == -1 && i >= 0)
     {
         /*******
@@ -241,7 +242,7 @@ void Flood_event_identify(
         /*******
          * independent peak is not reached during start of event back-tracing
          * ****/
-        *id_end = i + n_low - 1;
+        *id_end = i - n_low + 1;
     }
 }
 
@@ -255,9 +256,9 @@ int peak_independent(
     
     if (id1 < id2)
     {
-        double Qmin;
+        double Qmin;  // lowest flow between two peaks
         double Qpeak1, Qpeak2;
-        double Qmax1, Qmax2;
+        double Qmax1, Qmax2; // bigger and smaller flow between these two peaks
         Qpeak1 = *(data_Q + id1);
         Qpeak2 = *(data_Q + id2);
         if (Qpeak1 > Qpeak2)
@@ -270,7 +271,7 @@ int peak_independent(
             Qmax1 = Qpeak2;
             Qmax2 = Qpeak1;
         }
-        Qmin = Qmax1;
+        Qmin = Qpeak1;
         for (size_t i = id1 + 1; i < id2; i++)
         {
             if (Qmin > *(data_Q + i))
