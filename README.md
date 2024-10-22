@@ -40,7 +40,8 @@ After successfully compiling the program and get the executable, call the app an
 
 - `-s`: the gradient threshold
 - `-q`: flood peak threshold
-- `-i`: input file, see example in `data` directory: `subdaily_discharge.nc` or `subdaily_discharge.out`
+- `-i`: file path and name of the input, see example in `data` directory: `subdaily_discharge.nc` or `subdaily_discharge.out`
+- `-o`: file path and name of the input
 
 ### Output
 
