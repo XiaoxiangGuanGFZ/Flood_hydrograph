@@ -35,8 +35,7 @@ make
 After successfully compiling the program and get the executable, call the app and feed the appropriate command-line arguments to run the program:
 
 ```
-.\Flood_hydrograph.exe -s 1.6 -q 177.9 -i .\subdaily_discharge.
-nc -o .\floodevent_out.csv
+.\Flood_hydrograph.exe -s 1.6 -q 177.9 -i .\subdaily_discharge.nc -o .\floodevent_out.csv
 ```
 
 - `-s`: the gradient threshold
