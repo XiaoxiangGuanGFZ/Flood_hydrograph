@@ -54,26 +54,49 @@ int main(int argc, char *argv[])
         print_usage();
         return EXIT_FAILURE;
     }
-
+    printf("-------------- command-line arguments: \n");
     // Print the parsed values (for debugging)
     printf("%s: %.3f\n", "- low flow threshold", s_value);
     printf("%s: %.3f\n", "- peak flow threshold", q_value);
     printf("%s: %s\n", "- input", input_file);
     printf("%s: %s\n", "- output", output_file);
-
-    /************
-     * data import:
-     * hourly simulated discharge
+    
+    /***************
+     * time series data import
      * *************/
-    char varName[30] = "Qsim_0000000101";
-    // char FP[] = "D:/CPFF/Flood_hydrograph/subdaily_discharge.nc";
-    size_t dimLen;
-    double *data_Q;
-    Data_import(input_file, varName, &data_Q, &dimLen);
+    printf("-------------- data import (preview of first 10 rows): \n");
+    size_t dimLen;   // the total length of the time series
+    double *data_Q;  // time series
+    dimLen = 1000000;
+    int fileformat = 0;
+    fileformat = check_file_extension(input_file);
+    if (fileformat == 0) {
+        ST_DATA *p_data;
+        Data_import_ascii(input_file, &data_Q, &p_data, dimLen);
+        printf("%6s %6s %6s %6s %6s %6s \n", "y", "m", "d", "h", "Qsim", "Qobs");
+        for (size_t i = 0; i < 10; i++)
+        {
+            printf("%6d %6d %6d %6d %6.3f %6.3f \n",
+                   (p_data + i)->y, (p_data + i)->m, (p_data + i)->d, (p_data + i)->h,
+                   (p_data + i)->Qsim, (p_data + i)->Qobs);
+        }
+    } else if (fileformat == 1) {
+        char varName[30] = "Qsim_0000000101";
+        Data_import(input_file, varName, &data_Q, &dimLen);
+        for (size_t i = 0; i < 10; i++)
+        {
+            printf("%6.3f \n",*(data_Q + i));
+        }
+    }
     printf("-------------- discharge data import: Done!\n");
+
+
+    /****************
+     * discharge process gradient derivation for the entire series
+     * **************/
     double *data_G;  // gradient of discharge
     Gradient_discharge(data_Q, &data_G, dimLen);
-    printf("-------------- discharge gradient compute: Done!\n");
+    printf("-------------- discharge gradient computed: Done!\n");
     
     // double position_th = 90;
     double G_percentile;
@@ -98,22 +121,23 @@ int main(int argc, char *argv[])
         &n_peaks,
         dimLen);
     printf("-------------- discharge peaks extraction: Done!\n");
-    // for (size_t i = 0; i < 100; i++)
-    // {
-    //     printf("%5.2f, %5.2f, %d\n", *(data_Q + i), *(data_G + i), *(flag_peak + i));
-    // }
-    
+
+    /**************
+     * based on the detected flood peaks,
+     * look foreward and backward for the start and end point of the event
+     * ************/
     FILE *p_out;
     if ((p_out = fopen(output_file, "w")) == NULL)
     {
         printf("Cannot create / open output file: %s\n", output_file);
         exit(1);
     }
+    fprintf(p_out, "event_id,datetime_index,time_series\n");
     DATETIME DT_start = {1950, 1, 1, 0}; 
     double Q_threshold; // = 177.0
     Q_threshold = q_value;
 
-    printf("-------------- flood events extraction: ...\n");
+    printf("-------------- flood event hydrograph extraction: ...\n");
     int id_start, id_end;
     int time_lag_days = 3; // time lag between two peaks; 3 days for catchment with area less than 1000km2
     int event_id = 0;
