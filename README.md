@@ -43,6 +43,16 @@ After successfully compiling the program and get the executable, call the app an
 - `-i`: file path and name of the input, see example in `data` directory: `subdaily_discharge.nc` or `subdaily_discharge.out`
 - `-o`: file path and name of the input
 
+
+### Input
+
+two examplary data files are simulation outputs from mHM model: 
+
+- `subdaily_discharge.nc`
+- `subdaily_discharge.out`
+
+For ASCII-based input file, there requires 7 columns separated by **space**, with the last column indicating the discharge sequence to be applied in flood event identification.
+
 ### Output
 
 The result file has three columns indicating the detected event id, the date index and the series value respectively.
