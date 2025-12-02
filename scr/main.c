@@ -103,6 +103,13 @@ int main(int argc, char *argv[])
      * **************/
     double *data_G;  // gradient of discharge
     Gradient_discharge(data_Q, &data_G, dimLen);
+    // for (size_t i = 0; i < dimLen; i++)
+    // {
+    //     printf(
+    //         "index: %ld, %f\n",i,  *(data_G + i)
+    //     );
+    // }
+    
     printf("-------------- discharge gradient computed: Done!\n");
     
     // double position_th = 90;
@@ -113,6 +120,7 @@ int main(int argc, char *argv[])
     //     0.5667546 0.7167893 1.1169979 1.6636920 
     // printf("90th percentile of discharge gradient: %5.1f\n", G_percentile);
     G_percentile = s_value;  // from command-line argument
+    // printf("%s: %.3f\n", "- G_percentile", G_percentile);
     /*****************
      * extract all the discharge peaks
      * **************/

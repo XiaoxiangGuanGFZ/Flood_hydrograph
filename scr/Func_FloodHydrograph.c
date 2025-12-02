@@ -31,7 +31,7 @@ void Flood_AddNoise(
     {
         Q1 = *(*data_Q + i);
         Q2 = *(*data_Q + i + 1);
-        if (fabs(Q1 - Q2) <= EPS && Q1 >= Q_threshold / 2.0){ // * fmax(fabs(Q1), fabs(Q2))
+        if (fabs(Q1 - Q2) <= EPS && Q1 >= Q_threshold / 2.0){ // * fmax(fabs(Q1), fabs(Q2)) ;; 
             *(*data_Q + i + 1) += 1e-4;
             // printf("Q1: %8f Q2: %8f Q2_new: %8f\n", Q1, Q2, *(*data_Q + i + 1));
         }
@@ -189,7 +189,7 @@ void Flood_event_identify(
             } else {
                 // it is close to the evaluated peak, distance < time_lag_steps; 
                 // or it is a dependent peak
-                if (abs(*(data_G + i)) <= G_threshold)
+                if (fabs(*(data_G + i)) <= G_threshold)
                 {
                     n_low += 1;
                 }
@@ -201,7 +201,7 @@ void Flood_event_identify(
         } else {
             // *(flag_peak + i) either 0 or -1
             //  not a peak
-            if (abs(*(data_G + i)) <= G_threshold)
+            if (fabs(*(data_G + i)) <= G_threshold)
             {
                 n_low += 1;
             }
@@ -259,7 +259,7 @@ void Flood_event_identify(
             } else {
                 // it is not an independent peak;
                 // it should be included in this detected event. 
-                if (abs(*(data_G + i)) <= G_threshold)
+                if (fabs(*(data_G + i)) <= G_threshold)
                 {
                     n_low += 1;
                 }
@@ -270,7 +270,7 @@ void Flood_event_identify(
             }
         } else {
             //  not a peak
-            if (abs(*(data_G + i)) <= G_threshold)
+            if (fabs(*(data_G + i)) <= G_threshold)
             {
                 n_low += 1;
             }
