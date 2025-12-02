@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <netcdf.h>
 #include <time.h>
+#include <math.h>
 #include "def_struct.h"
 #include "Func_DataIO.h"
 #include "Func_FloodHydrograph.h"
@@ -65,14 +66,16 @@ int main(int argc, char *argv[])
      * time series data import
      * *************/
     printf("-------------- data import (preview of first 10 rows): \n");
-    size_t dimLen;   // the total length of the time series
+    size_t dimLen;   // the total length of the time series, predefined
+    size_t Len_record;
     double *data_Q;  // time series
     dimLen = 1000000;
     int fileformat = 0;
     fileformat = check_file_extension(input_file);
     if (fileformat == 0) {
         ST_DATA *p_data;
-        Data_import_ascii(input_file, &data_Q, &p_data, dimLen);
+        Len_record = Data_import_ascii(input_file, &data_Q, &p_data, dimLen);
+        printf("- Record length: %ld\n", Len_record);
         printf("%6s %6s %6s %6s %6s %6s \n", "y", "m", "d", "h", "Qsim", "Qobs");
         for (size_t i = 0; i < 10; i++)
         {
@@ -80,6 +83,8 @@ int main(int argc, char *argv[])
                    (p_data + i)->y, (p_data + i)->m, (p_data + i)->d, (p_data + i)->h,
                    (p_data + i)->Qsim, (p_data + i)->Qobs);
         }
+        
+        free(p_data);
     } else if (fileformat == 1) {
         char varName[30] = "Qsim_0000000101";
         Data_import(input_file, varName, &data_Q, &dimLen);
@@ -87,9 +92,11 @@ int main(int argc, char *argv[])
         {
             printf("%6.3f \n",*(data_Q + i));
         }
+        // Len_record = dimLen;
     }
+    dimLen = Len_record;  // the real length of record (time series)
+    Flood_AddNoise(&data_Q, dimLen, q_value);
     printf("-------------- discharge data import: Done!\n");
-
 
     /****************
      * discharge process gradient derivation for the entire series
@@ -101,18 +108,17 @@ int main(int argc, char *argv[])
     // double position_th = 90;
     double G_percentile;
     // Gradient_percentile(data_G, position_th, &G_percentile, dimLen);
-    // G_percentile = 0.5667546;
-    G_percentile = s_value;
+    // G_percentile = 0.5667546;    
     //           90%       92%       95%       97% 
     //     0.5667546 0.7167893 1.1169979 1.6636920 
     // printf("90th percentile of discharge gradient: %5.1f\n", G_percentile);
-
+    G_percentile = s_value;  // from command-line argument
     /*****************
      * extract all the discharge peaks
      * **************/
     int *flag_peak;
     int *index_peak;
-    int n_peaks;
+    size_t n_peaks;
     Flood_peaks(
         data_Q,
         data_G,
@@ -169,16 +175,21 @@ int main(int argc, char *argv[])
                 id_end,
                 event_id,
                 DT_start);
-            printf("%8d%9d%9d%8.2f\n", event_id, id_start, id_end, *(data_Q + *(index_peak + i)));
+            printf("%8d%9d%9d%9.4f\n", event_id, id_start, id_end, *(data_Q + *(index_peak + i)));
             event_id++;
 
-            while (id_end >= *(index_peak + i) && i < n_peaks)
+            while (id_end >= *(index_peak + i + 1) && i < n_peaks)
             {
                 i += 1;
             }
         }
     }
     printf("-------------- flood events extraction: Done!\n");
+    
+    free(data_G);
+    free(data_Q);
+    free(flag_peak);
+    free(index_peak);
     return 0;
 }
 
