@@ -1,18 +1,27 @@
 #ifndef Func_FloodHydrograph
 #define Func_FloodHydrograph
 
+#define EPS 1e-9
+
 void Gradient_discharge(
     double *data_Q,
     double **data_G,
     size_t dimLen
 );
 
+void Flood_AddNoise(
+    double **data_Q,
+    size_t dimLen,
+    double Q_threshold
+);
+
+
 void Flood_peaks(
     double *data_Q,
     double *data_G,
     int **flag_peak,
     int **index_peak,
-    int *n_peaks,
+    size_t *n_peaks,
     size_t dimLen
 );
 
@@ -40,7 +49,7 @@ void Flood_event_identify(
     int time_lag_days,
     double Q_threshold,
     double G_threshold,
-    int dimLen
+    size_t dimLen
 );
 
 #endif

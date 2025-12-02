@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <netcdf.h>
+#include <math.h>
 #include "def_struct.h"
 #include "Func_FloodHydrograph.h"
 
@@ -16,7 +17,25 @@ void Gradient_discharge(
     {
         *(*data_G + i) = *(data_Q + i) - *(data_Q + i + 1);
     }
-    *(*data_G + dimLen - 1) = 0;
+    *(*data_G + dimLen - 1) = 0.0;
+}
+
+void Flood_AddNoise(
+    double **data_Q,
+    size_t dimLen,
+    double Q_threshold
+)
+{
+    double Q1, Q2;
+    for (size_t i = 0; i < dimLen - 1; i++)
+    {
+        Q1 = *(*data_Q + i);
+        Q2 = *(*data_Q + i + 1);
+        if (fabs(Q1 - Q2) <= EPS && Q1 >= Q_threshold / 2.0){ // * fmax(fabs(Q1), fabs(Q2))
+            *(*data_Q + i + 1) += 1e-4;
+            // printf("Q1: %8f Q2: %8f Q2_new: %8f\n", Q1, Q2, *(*data_Q + i + 1));
+        }
+    }
 }
 
 void Flood_peaks(
@@ -24,22 +43,33 @@ void Flood_peaks(
     double *data_G,
     int **flag_peak,
     int **index_peak,
-    int *n_peaks,
+    size_t *n_peaks,
     size_t dimLen
 )
 {
-    int N_p;
-    N_p = (int) dimLen / 4;
+    /*************
+     * detect all peaks in the time series
+     * -----------
+     * flag_peak: a list of integers, flag variable: 
+     * -1: local minima 
+     * 0: others
+     * 1: local maxima
+     * 
+     * index_peak: index of detected peaks (local maxima)
+     * n_peaks: number of peaks
+     * ********/
+    size_t N_p;
+    N_p = dimLen; //  / 4;
     *flag_peak = (int *)malloc(sizeof(int) * dimLen);
     *(*flag_peak + 0) = 0;          // the first step
     *(*flag_peak + dimLen - 1) = 0; // the last step
 
     *index_peak = (int *)malloc(sizeof(int) * N_p);
 
-    int id = 0;
+    size_t id = 0;
     for (size_t i = 1; i < dimLen - 1; i++)
     {
-        if (*(data_G + i - 1) < 0 && *(data_G + i) >= 0)
+        if (*(data_G + i - 1) < EPS && *(data_G + i) > EPS) // >=0 
         {
             *(*flag_peak + i) = 1;
             *(*index_peak + id) = i;
@@ -51,11 +81,11 @@ void Flood_peaks(
             }
             
         } else if (
-            *(data_G + i - 1) > 0 && *(data_G + i) < 0
+            *(data_G + i - 1) > EPS && *(data_G + i) < EPS
         ) {
             *(*flag_peak + i) = -1;
         } else {
-            *(*flag_peak + i) = 0;
+            *(*flag_peak + i) = 0.0;
         }
     }
     *n_peaks = id;
@@ -68,6 +98,10 @@ void Gradient_percentile(
     size_t dimLen
 )
 {
+    /***************
+     * derive the gradient threshold
+     * this function is deprecated. 
+     * **************/
     double *data_Q_abs;
     data_Q_abs = (double *)malloc(sizeof(double) * dimLen);
     for (size_t i = 0; i < dimLen; i++)
@@ -107,7 +141,7 @@ void Flood_event_identify(
     int time_lag_days,
     double Q_threshold,
     double G_threshold,
-    int dimLen
+    size_t dimLen
 )
 {
     int time_lag_steps;
@@ -120,19 +154,20 @@ void Flood_event_identify(
 
     /************ start of the event ********/
     n_low = 0;
-    i = id_peak;  
+    i = id_peak;
     *id_start = -1;
     while (i > 0 && n_low < time_lag_steps)
     {
         i -= 1;   // trace back, prior to the peak step
-        if (*(flag_peak + i) == 1) {
-            // it is also peak
+        if (*(flag_peak + i) == 1) { // it is a peak (local maxima)
+
             if (abs(id_peak_tmp - i) >= time_lag_steps &&
-                peak_independent(data_Q, data_G, i, id_peak) == 1)
+                (peak_independent(data_Q, data_G, i, id_peak) == 1 ||
+                 *(data_Q + i) >= Q_threshold))
             {
                 /********
                  * it is an independent peak:
-                 * the searching of start of the event is stopped.
+                 * the searching of start of the event should be stopped.
                  * *****/
                 int id_find;
                 id_find = i + 1;
@@ -152,6 +187,8 @@ void Flood_event_identify(
                 }
                 break;
             } else {
+                // it is close to the evaluated peak, distance < time_lag_steps; 
+                // or it is a dependent peak
                 if (abs(*(data_G + i)) <= G_threshold)
                 {
                     n_low += 1;
@@ -162,6 +199,7 @@ void Flood_event_identify(
                 }
             }
         } else {
+            // *(flag_peak + i) either 0 or -1
             //  not a peak
             if (abs(*(data_G + i)) <= G_threshold)
             {
@@ -177,7 +215,8 @@ void Flood_event_identify(
     if (*id_start == -1 && i >= 0)
     {
         /*******
-         * independent peak is not reached during start of event back-tracing
+         * no independent peak is run into during start of event back-tracing,
+         * thus *id_start was not changed. 
          * ****/
         *id_start = i + n_low - 1;
     }
@@ -186,43 +225,47 @@ void Flood_event_identify(
     i = id_peak;
     n_low = 0;
     *id_end = -1;
-    while (i > 0 && n_low < time_lag_steps)
+    while (i < dimLen && n_low < time_lag_steps)
     {
         i += 1;  // looking forward from the peak
         if (*(flag_peak + i) == 1) {
-            // it is peak
+            // it is a peak at i
             if (abs(id_peak_tmp - i) >= time_lag_steps &&
-                peak_independent(data_Q, data_G, id_peak, i) == 1 )
+                (peak_independent(data_Q, data_G, id_peak, i) == 1 ||
+                *(data_Q + i) >= Q_threshold)
+                )
             {
                 /********
-                 * it is an independent peak:
-                 * the searching of start of the event is stopped.
+                 * it is an independent peak at i:
+                 * the searching of start of the event shoud be terminated.
                  * *****/
                 int id_find;
-                id_find = id_peak + 1;
-                while (id_find < i)
+                
+                id_find = i - 1;
+                while (id_find > id_peak)
                 {
                     if (*(flag_peak + id_find) == -1)  
                     {
                         /****
-                         * lowest flow between two independent peaks:
-                         * peak i and peak id_peak
+                         * the first local minima before peak i
                          * **/ 
                         *id_end = id_find;
                         break;
                     } else {
-                        id_find += 1;
+                        id_find -= 1;
                     }
                 }
                 break;
             } else {
+                // it is not an independent peak;
+                // it should be included in this detected event. 
                 if (abs(*(data_G + i)) <= G_threshold)
                 {
                     n_low += 1;
                 }
                 else
                 {
-                    n_low = 0; // refresh number of gradient lower than a predefined threshold [G_threshold]
+                    n_low = 0; // refresh number of gradients lower than a predefined threshold [G_threshold]
                 }
             }
         } else {
@@ -233,16 +276,18 @@ void Flood_event_identify(
             }
             else
             {
-                n_low = 0; // refresh number of gradient lower than a predefined threshold [G_threshold]
+                n_low = 0; // refresh number of gradients lower than a predefined threshold [G_threshold]
             }
         }
     }
-    if (*id_end == -1 && i >= 0)
+    if (*id_end == -1 && i < dimLen)
     {
         /*******
-         * independent peak is not reached during start of event back-tracing
+         * no independent peak is run into during start of event back-tracing
          * ****/
-        *id_end = i - n_low + 1;
+        // *id_end = i - n_low + 1;
+        // *id_end = i + n_low - 1;
+        *id_end = i;
     }
 }
 
