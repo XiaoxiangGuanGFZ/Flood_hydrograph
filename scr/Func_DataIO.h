@@ -10,7 +10,7 @@ void Data_import(
     size_t *dimLen
 );
 
-void Data_import_ascii(
+size_t Data_import_ascii(
     char fp_data[],
     double **data,
     ST_DATA **p_data,

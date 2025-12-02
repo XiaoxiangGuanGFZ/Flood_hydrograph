@@ -44,7 +44,7 @@ void Data_import(
 
 }
 
-void Data_import_ascii(
+size_t Data_import_ascii(
     char fp_data[],
     double **data,
     ST_DATA **p_data,
@@ -63,7 +63,8 @@ void Data_import_ascii(
     char *token;
     char row[MAXCHAR];
     char row_first[MAXCHAR];
-    int i = 0; // record the number of rows in the data file
+    size_t i = 0; // record the number of rows in the data file
+    size_t len_record;
     fgets(row_first, MAXCHAR, fp); // skip the first row
     // printf("%s\n", row_first);
     while (fgets(row, MAXCHAR, fp) != NULL && i < dimLen)
@@ -78,16 +79,17 @@ void Data_import_ascii(
         i++;
     }
     fclose(fp);
+    len_record = i;
     if (i > dimLen)
     {
         printf("conflict numbers of lines in data file: %s\n", fp_data);
         exit(1);
     }
-    for (size_t i = 0; i < dimLen; i++)
+    for (size_t i = 0; i < len_record; i++)
     {
         *(*data + i) = (*p_data + i)->Qsim;
     }
-    
+    return len_record;
 }
 
 
