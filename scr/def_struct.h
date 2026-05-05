@@ -15,13 +15,11 @@ typedef struct
 
 typedef struct
 {
-    int NO;
     int h;
     int d;
     int m;
     int y;
-    double Qobs;
-    double Qsim;
+    double Q;
 } ST_DATA;
 
 #endif
